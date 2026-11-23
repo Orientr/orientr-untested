@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="642" height="276" viewBox="0 4 214 92" role="img" aria-label="Orientr logo">
+  <!-- Orientr logo, dark version for dark backgrounds (design by the Orientr project, 2026). Copyright (C) 2026 Wouter Carleer. -->
+  <rect x="43" y="12" width="14" height="10" rx="1.5" fill="#E8EDF3"/>
+  <polygon points="45,22 55,22 50,30" fill="#E8EDF3"/>
+  <polygon points="8,70 50,49 92,70 50,91" fill="#1C2E46" stroke="#E8EDF3" stroke-width="3" stroke-linejoin="round"/>
+  <line x1="29" y1="59.5" x2="71" y2="80.5" stroke="#E8EDF3" stroke-width="1.5" opacity="0.35"/>
+  <line x1="71" y1="59.5" x2="29" y2="80.5" stroke="#E8EDF3" stroke-width="1.5" opacity="0.35"/>
+  <polygon points="30,48 50,58 50,80 30,70" fill="#FF6B3D"/>
+  <polygon points="50,58 70,48 70,70 50,80" fill="#C94A22"/>
+  <polygon points="30,48 50,38 70,48 50,58" fill="#FF9A73"/>
+  <line x1="92" y1="70" x2="209.6" y2="70" stroke="#E8EDF3" stroke-width="3" stroke-linecap="round"/>
+  <g transform="translate(90 65) scale(0.6)" fill="none" stroke="#4C9AFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="-39" width="24" height="36" rx="12"/>
+    <path transform="translate(38 0)" d="M3 -3 V-27 M3 -16 C3 -24 8 -27 16 -27"/>
+    <path transform="translate(65 0)" d="M3 -27 V-3"/>
+    <path transform="translate(79 0)" d="M3 -15 H25 C25 -23 20 -27 14 -27 C7 -27 3 -22 3 -15 C3 -7 7 -3 14 -3 C19 -3 23 -5 25 -8"/>
+    <path transform="translate(115 0)" d="M3 -3 V-27 M3 -18 C3 -24 8 -27 13 -27 C19 -27 23 -24 23 -18 V-3"/>
+    <path transform="translate(149 0)" d="M9 -39 V-9 C9 -5 11 -3 15 -3 H18 M3 -27 H17"/>
+    <path transform="translate(177 0)" d="M3 -3 V-27 M3 -16 C3 -24 8 -27 16 -27"/>
+  </g>
+  <rect x="128.55" y="39.50" width="4.50" height="4.50" rx="0.6" fill="#FF6B3D"/>
+</svg>
