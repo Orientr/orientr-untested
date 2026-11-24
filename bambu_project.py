@@ -984,11 +984,46 @@ def _studio_app() -> dict:
     return app if isinstance(app, dict) else {}
 
 
+def _exe_version(exe: str) -> str:
+    """The file version of `exe` as Bambu Studio writes it ("02.09.01.70"), from the version resource Windows keeps in
+    the file itself ('' when it has none or not on Windows)."""
+    if os.name != "nt":
+        return ""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        v = ctypes.WinDLL("version")
+        v.GetFileVersionInfoSizeW.argtypes = (wintypes.LPCWSTR, ctypes.POINTER(wintypes.DWORD))
+        v.GetFileVersionInfoW.argtypes = (wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p)
+        v.VerQueryValueW.argtypes = (ctypes.c_void_p, wintypes.LPCWSTR, ctypes.POINTER(ctypes.c_void_p),
+                                     ctypes.POINTER(wintypes.UINT))
+        size = v.GetFileVersionInfoSizeW(exe, None)
+        if not size:
+            return ""
+        buf = ctypes.create_string_buffer(size)
+        if not v.GetFileVersionInfoW(exe, 0, size, buf):
+            return ""
+        ptr, n = ctypes.c_void_p(), wintypes.UINT()
+        if not v.VerQueryValueW(buf, "\\", ctypes.byref(ptr), ctypes.byref(n)) or n.value < 52:
+            return ""
+        info = (wintypes.DWORD * 13).from_address(ptr.value)   # VS_FIXEDFILEINFO
+        if info[0] != 0xFEEF04BD:                             # its signature
+            return ""
+        ms, ls = info[2], info[3]                             # dwFileVersionMS, dwFileVersionLS
+        return ".".join(f"{x:02d}" for x in (ms >> 16, ms & 0xFFFF, ls >> 16, ls & 0xFFFF))
+    except (OSError, AttributeError, ValueError):
+        return ""
+
+
 def studio_versions() -> tuple[str, str]:
-    """(installed, newest seen online) Bambu Studio versions, from BambuStudio.conf: Bambu Studio writes both itself
-    ("version", and "cloud_version" when it checks for updates), so no network is needed. '' when unknown."""
+    """(installed, newest seen online) Bambu Studio versions, no network needed. '' when unknown.
+    Installed: from bambu-studio.exe itself (2026-11-24, tester: after a Studio update, before Studio ran again,
+    BambuStudio.conf still had the old "version", so the form said "Update" and "untested" until Studio had started);
+    from the conf only when the exe has no version. Newest: "cloud_version" in the conf, which Studio writes when it
+    checks for updates."""
     app = _studio_app()
-    return str(app.get("version") or ""), str(app.get("cloud_version") or "")
+    installed = _exe_version(BAMBU_EXE) if Path(BAMBU_EXE).exists() else ""
+    return installed or str(app.get("version") or ""), str(app.get("cloud_version") or "")
 
 
 def studio_running() -> bool:
@@ -1098,6 +1133,14 @@ _HIDDEN_PID: int | None = None                            # the hidden Studio th
 _WAIT_THREAD = None                                       # _prestart_when_ready: waits for a quiet PC, then starts it
 _CLOSING_PID: int | None = None                           # the hidden Studio cancel_prestart() is closing
 _LEFT_PID: int | None = None                              # closing was given up: in use, or a question from Studio
+
+
+def studio_never_started() -> bool:
+    """Bambu Studio is installed but was never started by this user: it has no settings file yet (2026-11-24, found
+    testing as a new user). Its first start asks a few questions (region, login, printers), which a hidden Studio would
+    keep invisible, and "single instance" cannot be switched on without the file: the background Studio waits until
+    the user opened Bambu Studio once."""
+    return os.name == "nt" and Path(BAMBU_EXE).exists() and not STUDIO_CONF.exists()
 
 
 def background_state() -> str | None:

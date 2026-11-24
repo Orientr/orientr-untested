@@ -10,6 +10,11 @@ set "SHORTCUT="
 if /i "%~1"=="--shortcut" set "SHORTCUT=1"
 set "PY=.soma\env\Scripts\python.exe"
 if exist "%PY%" goto run
+rem in SOMA's terminal outside the model's folder: the Python of the model SOMA has open (orientr.py then opens it)
+if defined SOMA_PROJECT if exist "%SOMA_PROJECT%\.soma\env\Scripts\python.exe" (
+  set "PY=%SOMA_PROJECT%\.soma\env\Scripts\python.exe"
+  goto run
+)
 set "PY="
 for /d %%W in ("%LOCALAPPDATA%\soma\workspaces\*") do if not defined PY if exist "%%W\.soma\env\Scripts\python.exe" set "PY=%%W\.soma\env\Scripts\python.exe"
 if not defined PY (

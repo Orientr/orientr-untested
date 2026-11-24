@@ -98,6 +98,14 @@ After that list (2026-11-23, user's wishes):
 - Open: the background Studio tried by hand with a real Studio (Yes+Enter starts it hidden, No+Enter really closes
   it, a visible Studio stays, quick Yes→No→Yes, the state follows); a second review of those commits.
 
+## Future features
+
+The user's wishes for later versions (list started 2026-11-24). Work out the details with the user before building.
+
+- **Advanced menu**: a separate menu for deeper settings, so the main form stays short.
+- **Max time**: an option for the maximum print time (like *Max plates*). Still to settle: per plate or in total,
+  and what happens when it is exceeded.
+
 ## Self-test of 2026-11-23 (what was checked)
 
 Static: compile, pyflakes (names from `import *` checked against the modules), the form's `sb.` names, i18n keys and

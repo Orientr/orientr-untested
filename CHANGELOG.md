@@ -3,6 +3,46 @@
 Version numbers: see [DEVELOPMENT.md](DEVELOPMENT.md#version-numbers). Source of each change: *(tester)*,
 *(own)* or *(review)*.
 
+## Unreleased
+
+## 0.1.0 (2026-11-24)
+
+The release repository is now public and called **orientr-untested**: the update check works without a GitHub
+login, so this and later versions show up in the header by themselves.
+
+- The release repository is public and renamed from orientr-test to orientr-untested (the old links still lead
+  there). The update check no longer needs the GitHub CLI. *(own)*
+- The form draws itself again when its terminal changes size, without waiting for a key. Started automatically
+  by SOMA, the form was drawn before SOMA's panel had its final width and stayed cut off. *(own)*
+- The Parts field shows **Parts (56)**: the number of objects to print (copies and duplicates included) in
+  the label, and just "10 of 10" beside it. It was cut off as "10 of 10 printed, 56 obj…". *(own)*
+- Windows' own console (no Windows Terminal, e.g. Windows 10): ✅ ⚠ ◆ are shown as √ ! ●. Its fonts lack them
+  (measured: Consolas and Cascadia Mono), and it showed boxes or question marks. *(own)*
+- A console window in legacy mode now says how to switch that off, instead of "the form needs the Windows
+  console". *(own)*
+- Part and model names with wide characters (Chinese, emoji) are measured as the two columns they take, so their
+  lines no longer run past the edge. *(own)*
+- When Windows Terminal shows no form within 30 s (an old version), the form opens in Windows' own console instead
+  of failing after 60 s; a Windows Terminal window that still comes later closes by itself. *(own)*
+- Background Bambu Studio on a PC where Bambu Studio was never started: the form now says to open it yourself once
+  first (its first start asks a few questions), instead of "already open, or Open in Bambu Studio is off". *(own)*
+- In a console of 60-61 columns (SOMA's panel on a laptop with display scaling) the version checks stay beside the
+  logo, as in a wider one; before, they went under the header. *(tester)*
+- Number fields (walls, infill, duplicates, copies) also take the digits of an AZERTY keyboard without Shift
+  (`& é " ' ( § è ! ç à`). *(own)*
+- In a console narrower than about 50 columns the field names give way too (cut with …): before, the menu ran past
+  the edge (from 45 columns in English, 49 in German, 50 in French). *(own)*
+- In SOMA's terminal `orientr` opens the form of the model SOMA has open (SOMA_PROJECT), also when the terminal is
+  in another folder; before, it showed the model list. *(tester)*
+- Walls and infill: type any number in the form (a digit opens the field): walls 1-20, infill 0-100 %, not only the
+  values on the list. A typed value joins the list, ← → reach it, and favorites keep it. *(own)*
+- Version check: the installed Bambu Studio version is read from `bambu-studio.exe` itself. After a Studio update,
+  before Studio had run again, the form said *Update Bambu Studio* and *untested* (the old version was still in
+  Studio's settings file) until Studio had started once. *(tester)*
+- Background Bambu Studio: the hint and the README say that Bambu Studio's banner shows for a few seconds when it
+  starts. It cannot be hidden: Windows only hides it once Bambu Studio has loaded (measured: 8.4 s), and Bambu
+  Studio has no setting to turn it off. *(tester)*
+
 ## 0.0.1 (2026-11-23)
 
 First test version of Orientr, for a few testers. Had an earlier test version? Install this one as the README says:

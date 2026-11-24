@@ -103,7 +103,8 @@ def orientr_version() -> str:
         return ""
 
 
-RELEASE_REPO = "orientr/orientr-test"   # where releases are published (organisation Orientr, 2026-11-22)
+RELEASE_REPO = "orientr/orientr-untested"   # where releases are published (organisation Orientr, 2026-11-22;
+                                            # was orientr-test until 2026-11-24, GitHub redirects the old name)
 
 
 RELEASE_VERSION_URL = f"https://raw.githubusercontent.com/{RELEASE_REPO}/master/VERSION"
@@ -523,10 +524,13 @@ def _form_window_size(ws: Path | None) -> tuple[int, int]:
 NOT_STARTED = f"the window did not start within {FORM_START_TIMEOUT} s (see it for an error)"
 
 
-def _started(pid_file: Path) -> int | None:
+WT_START_TIMEOUT = 30    # Windows Terminal: no form by then (an old version refusing --size): Windows' own console
+
+
+def _started(pid_file: Path, timeout: float = FORM_START_TIMEOUT) -> int | None:
     """The process id the new window writes first thing (own_console_start); None when it did not come in time."""
     t0 = time.time()
-    while time.time() - t0 <= FORM_START_TIMEOUT:
+    while time.time() - t0 <= timeout:
         try:
             return int(pid_file.read_text(encoding="utf-8").strip())
         except (OSError, ValueError):                     # not there yet, or still being written
@@ -541,7 +545,9 @@ def _form_in_terminal(wt: str, cwd: Path, cmd: list[str], pid_file: Path, size: 
     once, and the tab gets Windows Terminal's own environment: the variables the form needs (PATH, BAMBU_*, SOMA_*) go
     along in a temporary file, and the window writes its process id to pid_file, which this waits for (and with
     `wait` for that process to end). Returns (started, exit code or None, message when it never started); started is
-    False when wt.exe could not be run."""
+    False when wt.exe could not be run, or when no form came within WT_START_TIMEOUT (2026-11-24: an old Windows
+    Terminal without --size shows an error instead): then Windows' own console takes over, and a form that still comes
+    later in Windows Terminal closes at once (the ".late" marker next to pid_file, see own_console_start)."""
     cols, rows = size
     fd, env_file = tempfile.mkstemp(prefix=TEMP_PREFIX + "env-", suffix=".json")
     with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -555,9 +561,16 @@ def _form_in_terminal(wt: str, cwd: Path, cmd: list[str], pid_file: Path, size: 
                 return False, None, None                  # wt.exe refused: Windows' own console instead
         except OSError:
             return False, None, None
-        pid = _started(pid_file)                          # it read the env file before it wrote this
+        pid = _started(pid_file, WT_START_TIMEOUT)        # it read the env file before it wrote this
         if pid is None:
-            return True, None, NOT_STARTED
+            try:                                          # a form that comes after all: it closes at once
+                Path(str(pid_file) + ".late").write_text("", encoding="utf-8")
+            except OSError:
+                pass
+            if _started(pid_file, 0.5) is None:           # not in the meantime either: the console takes over
+                return False, None, None
+            _remove(Path(str(pid_file) + ".late"))        # it did come just now: keep it
+            pid = _started(pid_file, 0)
         return True, _wait_process(pid) if wait else None, None
     finally:
         _remove(Path(env_file))
@@ -567,6 +580,10 @@ def own_console_start(pid_file: str | None) -> None:
     """In the window _own_window() opened: tell it the process id (the variables it sent were taken over when this
     file was loaded, see _take_env_file)."""
     os.environ["ORIENTR_OWN_CONSOLE"] = "1"                 # also for the form the model chooser starts in this window
+    late = Path(str(pid_file) + ".late") if pid_file else None
+    if late and late.exists():                            # Windows Terminal came too late: Windows' own console
+        _remove(late)                                     # already shows the form (2026-11-24), so this window
+        raise SystemExit(0)                               # closes (exit code 0: Windows Terminal closes the tab)
     if pid_file:
         try:                                              # written whole, then renamed: _own_window never sees a
             part = Path(pid_file + ".part")               # half-written file, nor one still open (it deletes it)
@@ -589,10 +606,12 @@ def _own_window(cwd: Path, cmd: list[str], size: tuple[int, int], wait: bool = T
     one (_windows_terminal), else Windows' own console. With `wait` until that window ends, else only until it has
     started. Returns (exit code or None, message when it never started)."""
     pid_file = Path(tempfile.gettempdir()) / f"bambu-{uuid.uuid4().hex}.pid"
-    cmd = cmd + ["--pid-file", str(pid_file)]
+    wt_pid = Path(str(pid_file) + ".wt")                  # its own: a late Windows Terminal never takes the console's
     try:
         wt = _windows_terminal()
-        started, rc, failed = _form_in_terminal(wt, cwd, cmd, pid_file, size, wait) if wt else (False, None, None)
+        started, rc, failed = _form_in_terminal(wt, cwd, cmd + ["--pid-file", str(wt_pid)], wt_pid, size, wait) \
+            if wt else (False, None, None)
+        cmd = cmd + ["--pid-file", str(pid_file)]
         if not started:                                   # Windows' own console (it inherits the environment)
             flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
             env = {**os.environ, "ORIENTR_OWN_CONSOLE": "1"}   # a real console, also from SOMA
@@ -603,8 +622,9 @@ def _own_window(cwd: Path, cmd: list[str], size: tuple[int, int], wait: bool = T
                 failed = None if _started(pid_file) else NOT_STARTED
         return rc, failed
     finally:
-        _remove(pid_file)
-        _remove(Path(str(pid_file) + ".part"))            # a window that started too late
+        for p in (pid_file, wt_pid):
+            _remove(p)
+            _remove(Path(str(p) + ".part"))               # a window that started too late
 
 
 def _own_window_wanted() -> bool:
@@ -1320,6 +1340,24 @@ def _parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _is_model(folder: Path) -> bool:
+    """A SOMA model folder: model.py and .soma."""
+    return (folder / "model.py").exists() and (folder / ".soma").is_dir()
+
+
+def _soma_project() -> Path | None:
+    """The model SOMA has open, from SOMA_PROJECT (SOMA sets it in its terminal); None outside SOMA or when it is
+    not a model folder."""
+    value = os.environ.get("SOMA_PROJECT", "").strip().strip('"')
+    if not value:
+        return None
+    try:
+        folder = Path(value).resolve()
+    except (OSError, ValueError):
+        return None
+    return folder if folder.is_absolute() and _is_model(folder) else None
+
+
 def _main(args, argv, bare: bool) -> int:
     if argv is None:                                      # names, paths and reports with accents, also in a pipe
         for stream in (sys.stdout, sys.stderr):           # (python -I ignores PYTHONIOENCODING)
@@ -1327,8 +1365,14 @@ def _main(args, argv, bare: bool) -> int:
                 stream.reconfigure(encoding="utf-8", errors="replace")
             except (AttributeError, ValueError):
                 pass
+        import orientr_banner                             # Windows' own console: ✅ ⚠ ◆ as symbols its fonts have
+        orientr_banner.plain_symbols()
     ws = Path.cwd()
-    in_model = (ws / "model.py").exists() and (ws / ".soma").is_dir()
+    in_model = _is_model(ws)
+    soma = _soma_project()
+    if not in_model and soma:                             # in SOMA's terminal, but not in the model's folder
+        os.chdir(soma)                                    # (2026-11-24, tester: the model list instead of the form):
+        ws, in_model = soma, True                         # the model SOMA has open; everything below uses its folder
     if args.selftest or args.selftest_all:                # after a Studio update: everything that may have broken
         return selftest(args.selftest_all, args.template)
     if args.status:                                       # the status lines as JSON, also outside a model folder

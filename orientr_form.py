@@ -25,6 +25,25 @@ BADGES = {"opening": ("◦", ACCENT), "open": ("●", GREEN), "closing": ("◦",
 BOLD, FAINT = "\x1b[1m", "\x1b[2m"
 WALLS = [None, "1", "2", "3", "4", "5", "6"]
 INFILL = [None, "10", "15", "20", "25", "30", "40", "50", "75", "100"]
+# any whole number in these ranges can also be typed in (2026-11-24), the same ranges the tool takes in bambu.json
+TYPED = {"walls": (1, 20), "infill": (0, 100)}
+
+
+def _with_typed(values: list, value) -> list:
+    """The field's list with a typed value that is not on it (7 walls, 35 %) put in its place, so it shows and ←→ reach
+    it."""
+    if value is None or value in values:
+        return values
+    nums = [v for v in values if v is not None] + [value]
+    return [None] + sorted(nums, key=float)              # float: bambu.json may give "37.5" (infill)
+
+
+def _typed_ok(key: str, val) -> bool:
+    """A walls or infill value from a favorite: a whole number in TYPED's range, as text ("7"), or None (the preset)."""
+    if val is None:
+        return True
+    lo, hi = TYPED[key]
+    return isinstance(val, str) and val.isascii() and val.isdigit() and lo <= int(val) <= hi
 MODES = ["auto", "on", "off"]
 PLATES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]      # 0: no limit
 PRESET_SLOTS = 10         # 2026-11-21: slots with all settings, the same for every model (3, 10 since 2026-11-23)
@@ -68,22 +87,42 @@ def _underline(label: str, key: str) -> str:
     return label if i < 0 else f"{label[:i]}\x1b[4m{label[i]}\x1b[24m{label[i + 1:]}"
 
 
+# AZERTY (Belgian and French): the top row gives these without Shift; in a number field they count as its digits
+# (2026-11-24: Belgian testers). § and ! are Belgian, - and _ French.
+AZERTY_DIGITS = {"&": "1", "é": "2", '"': "3", "'": "4", "(": "5", "§": "6", "-": "6", "è": "7", "!": "8", "_": "8",
+                 "ç": "9", "à": "0"}
+
+
+def _as_digit(k: str) -> str:
+    """The digit key `k` stands for: 0-9 itself, or the AZERTY top-row character (AZERTY_DIGITS); '' for any other key
+    (str.isdigit also takes ² and other digits int() refuses)."""
+    if len(k) == 1 and k in "0123456789":
+        return k
+    return AZERTY_DIGITS.get(k, "")
+
+
 def _digit(k: str) -> bool:
-    """One of 0-9 (str.isdigit also takes ² and other digits int() refuses)."""
-    return len(k) == 1 and k in "0123456789"
+    """A digit key: 0-9, also as AZERTY gives it without Shift."""
+    return bool(_as_digit(k))
 
 
 class Cancel(Exception):
     pass
 
 
-def _key(tick=None) -> str:
+def _key(tick=None, resize: bool = True) -> str:
     """One key: 'up', 'down', 'left', 'right', 'home', 'end', 'enter', 'esc', 'back', 'tab', or the character.
-    `tick` is called every 0.25 s while no key comes (2026-11-23: the form redraws a changed Bambu Studio state)."""
+    `tick` is called every 0.25 s while no key comes (2026-11-23: the form redraws a changed Bambu Studio state).
+    'resize' when the console's size changed while waiting (2026-11-24: started by SOMA with its terminal, the form
+    was drawn before the panel had its final width and stayed cut off until a key came); the screens draw again."""
     import msvcrt
-    while tick is not None and not msvcrt.kbhit():
-        tick()
-        time.sleep(0.25)
+    size = shutil.get_terminal_size() if resize else None
+    while (tick is not None or resize) and not msvcrt.kbhit():
+        if resize and shutil.get_terminal_size() != size:
+            return "resize"
+        if tick is not None:
+            tick()
+        time.sleep(0.25 if tick is not None else 0.1)
     c = msvcrt.getwch()
     if c in ("\x00", "\xe0"):
         return {"H": "up", "P": "down", "K": "left", "M": "right", "G": "home", "O": "end", "I": "pgup",
@@ -106,8 +145,21 @@ def _status_lines(status: dict) -> list[str]:
 
 
 def _visible(text: str) -> int:
-    """The width a line takes on screen (colour codes take none)."""
-    return len(re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", text))
+    """The width a line takes on screen (colour codes take none, wide characters two)."""
+    import orientr_banner
+    return orientr_banner.cells(re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", text))
+
+
+def _pad(text: str, width: int) -> str:
+    """Plain text filled with spaces to `width` screen columns (f"{text:<{width}}" counts a wide character as one)."""
+    import orientr_banner
+    return text + " " * max(0, width - orientr_banner.cells(text))
+
+
+def _no_ansi_message() -> str:
+    """Why the form cannot run: Windows' own console in its legacy mode (it can be switched off), else no console."""
+    import orientr_banner
+    return t("run.legacy_console") if orientr_banner.legacy_console() else t("run.windows_only")
 
 
 SCROLL_ROOM = 14      # rows a form that scrolls keeps under its fixed header at least (see _head)
@@ -126,11 +178,16 @@ def _head(lines: list[str], side: int = 0, below_extra: int = 0,
     try:
         import orientr_banner as b
         status = _beside(lines[:side])
-        fits = b.status_place(status) is not None         # under the baseline, right of the plate (2026-11-23)
-        rows = b.final_frame(status=status)
         need = min(len(lines) - side + below_extra, SCROLL_ROOM) if scroll else len(lines) - side + below_extra
-        if side and fits and _cols() >= b.WIDTH + 1 and len(rows) + need <= _rows():
-            return rows, lines[side:]
+        # with its indent, else without it in a console of 60-61 columns (2026-11-24, tester: a laptop with display
+        # scaling had 60 columns in SOMA's panel, and the version checks went under the header)
+        for indent in (2, 0):
+            if not side or _cols() < b.WIDTH - 2 + indent + 1:
+                continue
+            fits = b.status_place(status, indent) is not None   # under the baseline, right of the plate (2026-11-23)
+            rows = b.final_frame(indent, status)
+            if fits and len(rows) + need <= _rows():
+                return rows, lines[side:]
     except Exception:
         pass
     return _banner(min(len(lines) + below_extra, SCROLL_ROOM) if scroll else len(lines) + below_extra), lines
@@ -233,6 +290,8 @@ def _animate_banner(rows: list[str], beside: list[str] = ()) -> None:
     status = _beside(list(beside))
     if beside and rows == b.final_frame(status=status):
         indent = 2
+    elif beside and rows == b.final_frame(0, status=status):   # 60-61 columns (see _head)
+        indent = 0
     elif rows == b.final_frame():
         indent, status = 2, []
     elif rows == b.final_frame(0):
@@ -251,7 +310,7 @@ def choose_model(sb) -> int:
     import subprocess
     import orientr_banner
     if os.name != "nt" or not orientr_banner.enable_ansi():
-        print(t("run.windows_only"))
+        print(_no_ansi_message())
         return 2
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -478,8 +537,18 @@ def _center_own_window() -> None:
 
 
 def _clip(text: str, room: int) -> str:
-    """Plain text cut to the room left on the line (colour codes are added around it afterwards)."""
-    return text if len(text) <= room else text[:max(1, room - 1)] + "…"
+    """Plain text cut to the room left on the line (colour codes are added around it afterwards), in screen columns:
+    a wide character (Chinese, emoji) takes two (2026-11-24)."""
+    import orientr_banner
+    if orientr_banner.cells(text) <= room:
+        return text
+    out, used = "", 0
+    for c in text:
+        w = orientr_banner.cells(c)
+        if used + w > max(1, room - 1):
+            break
+        out, used = out + c, used + w
+    return out + "…"
 
 
 class Form:
@@ -819,7 +888,10 @@ class Form:
         save_setting("prestart", on)
         if on:
             started = self.open and self.sb.prestart_studio()
-            self.note = t("n.prestart_started" if started else "n.prestart_not_started")
+            # never started yet (no settings file): say what to do, not "already open" (2026-11-24)
+            first = not started and self.open and self.sb.studio_never_started()
+            self.note = t("n.prestart_started" if started else "n.prestart_first" if first
+                          else "n.prestart_not_started")
         else:
             self.sb.cancel_prestart()
             self.note = t("n.prestart_closed")
@@ -842,8 +914,9 @@ class Form:
         _, fils, procs = self._lists(self.printer)
         yes_no = [(True, t("v.yes")), (False, t("v.no"))]
         modes = [(m, t(f"v.{m}")) for m in MODES]
-        walls = [(w, t("v.profile") if w is None else t("v.wall" if w == "1" else "v.walls", n=w)) for w in WALLS]
-        infill = [(i, t("v.profile") if i is None else f"{i} %") for i in INFILL]
+        walls = [(w, t("v.profile") if w is None else t("v.wall" if w == "1" else "v.walls", n=w))
+                 for w in _with_typed(WALLS, self.walls)]
+        infill = [(i, t("v.profile") if i is None else f"{i} %") for i in _with_typed(INFILL, self.infill)]
         mark = lambda v, v0: f"{v}  ({t('v.current')})" if v == v0 else v   # noqa: E731
         # a printer with two nozzles; with a colour template the choice does not apply (see DEVELOPMENT.md)
         # (2026-11-23: also with several colours made by the tool: Bambu Studio maps the filaments to the nozzles)
@@ -868,7 +941,8 @@ class Form:
             ("brim", t("f.brim"), modes, self.brim, lambda v: setattr(self, "brim", v)),
             ("walls", t("f.walls"), walls, self.walls, lambda v: setattr(self, "walls", v)),
             ("infill", t("f.infill"), infill, self.infill, lambda v: setattr(self, "infill", v)),
-            ("parts", t("f.parts"), None, None, None),
+            # "Parts (56)": the objects to print (copies and duplicates included) in the label, "10 of 10" beside it
+            ("parts", t("f.parts_n", n=self.objects()), None, None, None),
             ("duplicates", t("f.duplicates"), [(n, f"{n} ×") for n in range(1, self.sb.MAX_COPIES + 1)],
              self.duplicates, lambda v: setattr(self, "duplicates", v)),
             ("max_plates", t("f.max_plates"), [(n, t("v.no_limit") if n == 0 else t("v.plate") if n == 1 else
@@ -893,9 +967,6 @@ class Form:
         key, _, opts, value, _ = f
         if key == "parts":
             on = [n for n in self.parts if n not in self.skip]
-            total = self.objects()
-            if total != len(on):                          # duplicates or copies: how many objects that makes
-                return t("v.objects", on=len(on), all=len(self.parts), n=total)
             return t("v.parts", on=len(on), all=len(self.parts))
         return next((lab for v, lab in opts if v == value), str(value or "-"))
 
@@ -961,6 +1032,9 @@ class Form:
         width, room = self._layout(fs)
         # a narrower console: the values give way. 3 = the rules' indent of 2 + the last column, never written
         room = max(8, min(room, _cols() - width - MENU_EXTRA - 3))
+        # still too narrow (values at their least): the labels give way too, cut with … (2026-11-24: below 45-50
+        # columns, by language, the menu ran past the edge)
+        width = max(6, min(width, _cols() - room - MENU_EXTRA - 3))
         menu = min(room + width + MENU_EXTRA, _cols() - 3)   # the menu's width: its rules, and the buttons span it
         rule = f"  {GREY}{'─' * menu}{RESET}"
         starts = {}
@@ -976,14 +1050,15 @@ class Form:
                     lines += [rule]
                 lines.append(f"  {BOLD}{t(starts[i])}{RESET}")
             value = _clip(self._shown(f), room)
-            cell = f"{value:<{room}}"
+            cell = _pad(value, room)
             badge = self._badge(i == self.row) if f[0] == "prestart" else (1, "⚠") if f[0] in warned else None
-            if badge and len(value) + 2 + badge[0] <= room:   # the state at the right end of the value (2026-11-23)
-                cell = value + " " * (room - len(value) - badge[0]) + badge[1]
+            if badge and _visible(value) + 2 + badge[0] <= room:   # the state at the right end of the value
+                cell = value + " " * (room - _visible(value) - badge[0]) + badge[1]   # (2026-11-23)
             # two spaces between a symbol and the text (2026-11-21: they stood against it); ◄ ► and not ◀ ▶,
             # which Consolas, the font of Windows' own console, does not have (2026-11-23: boxes with a ?)
-            text = f"{f[1]:<{width}} ◄  {cell}  ►" if f[2] is not None else \
-                f"{f[1]:<{width}}    {cell}  …"
+            label = _clip(f[1], width - 1)                # one space always stays between label and ◄
+            text = f"{_pad(label, width)} ◄  {cell}  ►" if f[2] is not None else \
+                f"{_pad(label, width)}    {cell}  …"
             if i == self.row:
                 self._sel_line = len(lines)
             # a field with a warning in orange (2026-11-23); the selected row stays white on blue, easier to read
@@ -1135,6 +1210,8 @@ class Form:
             self._bg = self._bg_state()
             self.draw(self.screen())
             k = _key(self._tick)
+            if k == "resize":                             # only drawn again, the message stays
+                continue
             self.note = ""                                # a message stays until the next key
             if k == "esc":
                 raise Cancel
@@ -1183,6 +1260,12 @@ class Form:
                     self.duplicates = max(1, min(self.sb.MAX_COPIES, self.duplicates + (1 if k == "right" else -1)))
                 elif k == "enter" or _digit(k):
                     self.duplicates = self.ask_number(label, "" if k == "enter" else k, self.duplicates)
+                continue
+            if key in TYPED and _digit(k):                # walls, infill: a digit types the number (2026-11-24);
+                lo, hi = TYPED[key]                       # ←→ and Enter keep the list
+                n = self.ask_number(label, k, None, lo, hi)
+                if n is not None:
+                    setter(str(n))
                 continue
             values = [v for v, _ in opts]
             if not values:                                # no Bambu Studio profiles for this printer: nothing to pick
@@ -1256,12 +1339,15 @@ class Form:
                     kept.append(f"{t('f.' + key)} {v[key]}")
         # only values the form's own lists hold (a hand-edited file); bools are not numbers here
         for key, allowed in (("nozzle", ("auto", "left", "right")), ("support", MODES), ("brim", MODES),
-                             ("walls", WALLS), ("infill", INFILL), ("open", (True, False)),
+                             ("walls", None), ("infill", None), ("open", (True, False)),
                              ("duplicates", range(1, self.sb.MAX_COPIES + 1)), ("max_plates", PLATES)):
             if key not in v:
                 continue
             val = v[key]
-            ok = (isinstance(val, bool) if key == "open" else not isinstance(val, bool)) and val in allowed
+            if allowed is None:                           # walls, infill: also a typed number (2026-11-24)
+                ok = _typed_ok(key, val)
+            else:
+                ok = (isinstance(val, bool) if key == "open" else not isinstance(val, bool)) and val in allowed
             if ok:
                 setattr(self, key, val)
             else:
@@ -1286,29 +1372,32 @@ class Form:
             elif len(k) == 1 and k.isprintable() and len(text) < PRESET_NAME_MAX:
                 text += k
 
-    def ask_number(self, title: str, text: str, current: int) -> int:
-        """A whole number 1..MAX_COPIES, typed in (digits, Backspace deletes); `current` on Esc or when left empty.
-        A number above the maximum is not taken: the line says the range."""
-        hi = self.sb.MAX_COPIES
+    def ask_number(self, title: str, text: str, current, lo: int = 1, hi: int | None = None):
+        """A whole number lo..hi (default 1..MAX_COPIES), typed in (digits, Backspace deletes); `current` on Esc or
+        when left empty. A number outside the range is not taken: the line says the range."""
+        hi = self.sb.MAX_COPIES if hi is None else hi
+        text = "".join(_as_digit(c) for c in text)        # the key that opened it may be an AZERTY digit
+        text = text.lstrip("0") or ("0" if text and lo == 0 else "")
         while True:
-            n = int(text) if text else 0
-            msg = t("n.range", hi=hi)
+            n = int(text) if text else -1
+            msg = t("n.range", lo=lo, hi=hi)
+            bad = bool(text) and not lo <= n <= hi
             self.draw([f"  {BOLD}{_clip(title, _cols() - 4)}{RESET}", "",
                        f"  {t('ps.number')}{text}\x1b[7m \x1b[27m", "",
-                       f"  {(ORANGE if n > hi else GREY)}{_clip(msg, _cols() - 4)}{RESET}",
+                       f"  {(ORANGE if bad else GREY)}{_clip(msg, _cols() - 4)}{RESET}",
                        f"  {GREY}{_clip(t('help.name'), _cols() - 4)}{RESET}"])
             k = _key()
             if k == "esc":
                 return current
             if k == "enter":
-                if 1 <= n <= hi:
+                if text and lo <= n <= hi:
                     return n
                 if not text:
                     return current
             elif k == "back":
                 text = text[:-1]
             elif _digit(k) and len(text) < len(str(hi)) + 1:
-                text = (text + k).lstrip("0")
+                text = (text + _as_digit(k)).lstrip("0") or ("0" if lo == 0 else "")
 
     def preview(self) -> None:
         """Preview: the tool makes the project with the choices on screen in a temporary folder and Bambu Studio
@@ -1393,15 +1482,16 @@ class Form:
             body = [f"  {ORANGE}{w}{RESET}" for w in textwrap.wrap(f"⚠  {type(e).__name__}: {e}", max(20, _cols() - 6))]
         # the header stays (2026-11-23: in a cmd window of 30 rows it gave way to the results), and results taller than
         # the rows under it scroll with ↑↓ (they were cut with "…": the plates and warnings did not show)
-        foot = ["", f"  {_clip(t('pv.back'), _cols() - 4)}"]
-        banner, head = _head(full, len(self.header()), len(body) + len(foot), scroll=True)
-        room = max(1, _rows() - len(banner) - len(head) - len(foot))
-        if len(body) > room:
-            foot[-1] = f"  {_clip(t('pv.back_scroll'), _cols() - 4)}"
         while msvcrt.kbhit():                             # keys pressed while it sliced do not count
             msvcrt.getwch()
         off = 0
-        while True:
+        while True:                                       # header and room per draw: the console may be resized
+            foot = ["", f"  {_clip(t('pv.back'), _cols() - 4)}"]
+            banner, head = _head(full, len(self.header()), len(body) + len(foot), scroll=True)
+            room = max(1, _rows() - len(banner) - len(head) - len(foot))
+            if len(body) > room:
+                foot[-1] = f"  {_clip(t('pv.back_scroll'), _cols() - 4)}"
+            off = max(0, min(off, len(body) - room))
             view = body[off:off + room]
             if off > 0:
                 view[0] = f"  {GREY}▲{RESET}"
@@ -1409,6 +1499,8 @@ class Form:
                 view[-1] = f"  {GREY}▼{RESET}"
             self.draw(banner + head + view + foot)
             k = _key()
+            if k == "resize":
+                continue
             if len(body) > room and k in ("up", "down", "pgup", "pgdn", "home", "end"):
                 last = len(body) - room
                 off = {"up": off - 1, "down": off + 1, "pgup": off - room, "pgdn": off + room, "home": 0,
@@ -1455,7 +1547,7 @@ def run(ws: Path, sb, wait_at_end: bool = False) -> int:
     closes at once (2026-11-22)."""
     import orientr_banner
     if os.name != "nt" or not orientr_banner.enable_ansi():
-        print(t("run.windows_only"))
+        print(_no_ansi_message())
         return 2
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -1495,7 +1587,7 @@ def run(ws: Path, sb, wait_at_end: bool = False) -> int:
             except sb.ToolError as e:                     # refused: show it, then the form again
                 building = False
                 print(f"\n{ORANGE}{t('run.error', msg=cap(e))}{RESET}\n{t('run.back')}")
-                _key()
+                _key(resize=False)
                 _free_banner()
                 form.rebase(sb.read_config(ws))           # the tool may have saved part of the choices already
                 form.status = {"ok": False, "lines": [str(e).splitlines()[0]]}
@@ -1517,7 +1609,7 @@ def run(ws: Path, sb, wait_at_end: bool = False) -> int:
     if wait_at_end and result["status"] == "error":
         print(f"\n{t('run.done')}")
         try:
-            _key()
+            _key(resize=False)
         except KeyboardInterrupt:
             pass
     return 0 if result["status"] in ("made", "cancelled") else 1

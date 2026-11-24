@@ -133,14 +133,86 @@ def _lockup_rows(grown: int, cols: int) -> list[str]:
                                 for x, c in enumerate(row)) for y, row in enumerate(LOCKUP)])
 
 
+def cells(text: str) -> int:
+    """Screen columns of plain text: wide characters (Chinese, Japanese, emoji such as ✅) take two, combining accents
+    none (2026-11-24: a part name in Chinese ran past the edge)."""
+    import unicodedata
+    return sum(0 if unicodedata.combining(c) else 2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
+
+
 def _visible(text: str) -> int:
+    """Screen columns of a line: colour codes take none."""
     import re
-    return len(re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", text))
+    return cells(re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", text))
 
 
-def _width(text: str) -> int:
-    """Screen columns of a line: colour codes take none, an emoji (✅) two."""
-    return _visible(text) + text.count("✅")
+_width = _visible                                         # ✅ counts two in cells() itself
+
+
+# --- Windows' own console (conhost) -----------------------------------------------------------------------------------
+# Its fonts lack some of the tool's symbols, and it takes none from another font (Windows Terminal and SOMA do):
+# measured 2026-11-24 with GetGlyphIndicesW, Consolas (Windows 10) and Cascadia Mono (Windows 11) have no ✅ or ⚠,
+# Consolas no ◆. There they are written as symbols those fonts have, each as wide as the one it stands for.
+PLAIN_SYMBOLS = str.maketrans({"✅": "√ ", "⚠": "!", "◆": "●"})
+
+
+def conhost() -> bool:
+    """Is the output Windows' own console window (class ConsoleWindowClass)? Not Windows Terminal or SOMA's panel,
+    which run the tool in a pseudo console (class PseudoConsoleWindow)."""
+    if os.name != "nt":
+        return False
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k32, u32 = ctypes.WinDLL("kernel32"), ctypes.WinDLL("user32")
+        k32.GetConsoleWindow.restype = wintypes.HWND
+        u32.GetClassNameW.argtypes = (wintypes.HWND, wintypes.LPWSTR, ctypes.c_int)
+        hwnd = k32.GetConsoleWindow()
+        name = ctypes.create_unicode_buffer(64)
+        return bool(hwnd) and u32.GetClassNameW(hwnd, name, 64) > 0 and name.value == "ConsoleWindowClass"
+    except Exception:
+        return False
+
+
+class _PlainSymbols:
+    """sys.stdout with PLAIN_SYMBOLS applied to everything written; anything else goes to the real stream."""
+
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, text):
+        return self._stream.write(text.translate(PLAIN_SYMBOLS) if isinstance(text, str) else text)
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+def plain_symbols() -> None:
+    """In Windows' own console: from now on every symbol it cannot show is written as one it can (PLAIN_SYMBOLS).
+    Once per process; nothing changes in Windows Terminal, SOMA or a pipe."""
+    if isinstance(sys.stdout, _PlainSymbols) or not sys.stdout.isatty() or not conhost():
+        return
+    sys.stdout = _PlainSymbols(sys.stdout)
+
+
+def legacy_console() -> bool:
+    """Windows' own console in its legacy mode ("Use legacy console" in its Properties): it cannot switch on colour
+    codes, so the form cannot run there (2026-11-24: the form then said it needs Windows, which was wrong)."""
+    if os.name != "nt" or not sys.stdout.isatty():
+        return False
+    try:
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        h = k32.GetStdHandle(-11)
+        mode = ctypes.c_uint32()
+        if not k32.GetConsoleMode(h, ctypes.byref(mode)):
+            return False
+        if not k32.SetConsoleMode(h, mode.value | 0x0004):   # ENABLE_VIRTUAL_TERMINAL_PROCESSING refused
+            return True
+        k32.SetConsoleMode(h, mode.value)                 # it works: as it was
+        return False
+    except (OSError, AttributeError):
+        return False
 
 
 def _put(rows: list[str], i: int, col: int, text: str) -> None:
@@ -204,9 +276,12 @@ def _enable_ansi() -> bool:
         mode = ctypes.c_uint32()
         if not k32.GetConsoleMode(h, ctypes.byref(mode)):
             return False
-        return bool(k32.SetConsoleMode(h, mode.value | 0x0004))   # ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        if not k32.SetConsoleMode(h, mode.value | 0x0004):   # ENABLE_VIRTUAL_TERMINAL_PROCESSING
+            return False
     except (OSError, AttributeError):
         return False
+    plain_symbols()                                       # Windows' own console: symbols its fonts have
+    return True
 
 
 def show(animate: bool = True, lead: bool = True, indent: int = 2, status: tuple | list = ()) -> None:

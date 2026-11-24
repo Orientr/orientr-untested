@@ -23,7 +23,7 @@ Windows only. English, German and French.
       ▄▄▀████████████▀▄▄    ▀▄▄▄▀ █    █ ▀▄▄▄▄ █   █  ▀▄ █
   ▄▄▀▀██████████████████▀▀▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
     ▀▀▄▄███▀▀████▀▀███▄▄▀▀
-        ▀▀▄▄██████▄▄▀▀     ✅  Orientr 0.0.1: up to date
+        ▀▀▄▄██████▄▄▀▀     ✅  Orientr 0.1.0: up to date
             ▀▀▄▄▀▀   ✅  Bambu Studio 02.09.01.70: up to date
 
   Project: Lid
@@ -46,7 +46,7 @@ Windows only. English, German and French.
    Infill                    ◄  as in the preset                   ►
   ─────────────────────────────────────────────────────────────────────
   Quantity Settings
-   Parts                        10 of 10 printed                    …
+   Parts (10)                   10 of 10                            …
    Duplicates                ◄  1 ×                                 ►
    Max plates                ◄  no limit                            ►
   ─────────────────────────────────────────────────────────────────────
@@ -115,8 +115,10 @@ are named after Bambu Studio, because they belong to it (other slicers may get t
   (see [More colors](#more-colors)). A model you have not made a project for yet starts with what is selected in
   Bambu Studio (printer, nozzle size, filament, process), as far as this tool has a template and Bambu Studio's own
   preset for it.
-- **Quality Settings**: the process preset, support and brim (*auto* decides per part), walls and infill.
-- **Quantity Settings**: **Parts** (Enter: switch parts on or off with Space, set how many of a part with ← → or type the
+- **Quality Settings**: the process preset, support and brim (*auto* decides per part), walls and infill (← → or
+  Enter: from the list; or just type a number: walls 1 to 20, infill 0 to 100 %).
+- **Quantity Settings**: **Parts** (in brackets the number of objects to print, beside it how many parts are on;
+  Enter: switch parts on or off with Space, set how many of a part with ← → or type the
   number; each part shows the color it prints in, **C** chooses another color from a list),
   **Duplicates** (the whole set this many times, ← → or type the number) and **Max plates** (more plates needed: a tighter layout is tried,
   and if that is still too many nothing is made).
@@ -140,8 +142,10 @@ Orientr is available (see [Network and privacy](#network-and-privacy)).
 ### Background Bambu Studio
 
 With **Background Bambu Studio** on (it is off after install), Bambu Studio starts hidden as soon as SOMA has finished
-starting and the PC is quiet, so that *Generate* opens the project in about 2 s instead of about 20 s. You see no
-window and no taskbar button until Generate. When nothing is opened in it (canceled, only Analyze, or *Open in Bambu
+starting and the PC is quiet, so that *Generate* opens the project in about 2 s instead of about 20 s. Only Bambu
+Studio's banner (splash screen) shows for a few seconds while it starts: Windows lets no other program hide it while
+Bambu Studio is loading, and Bambu Studio has no setting to turn it off. After that you see no window and no taskbar
+button until Generate. When nothing is opened in it (canceled, only Analyze, or *Open in Bambu
 Studio* off) it closes again by itself, also when the form's window is closed with ×. If you start Bambu Studio
 yourself meanwhile, that window simply appears. It puts extra load on the PC: while the form is open, Bambu Studio
 runs in the background and uses memory and processor time.
@@ -154,6 +158,10 @@ background Bambu Studio does, and keeps it up to date: ◦ *Opening…*, ● *Op
 To make this work the tool switches on Bambu Studio's *single instance* setting once (only while Bambu Studio is
 closed; a copy of its settings is kept as `%APPDATA%\BambuStudio\BambuStudio.conf.orientr.bak`). The option is
 saved for every model.
+
+Just installed Bambu Studio? Open it yourself once first: its first start asks a few questions (region, login,
+printers), which a hidden Bambu Studio could not show, and only after that does it have the settings file the tool
+needs. Until then the form says so, and *Generate* opens Bambu Studio the normal way.
 
 ### Other commands
 
@@ -330,7 +338,7 @@ starts with the common ones (PLA Basic, PETG Basic, ...); new filaments appear b
   about a newer version. Nothing is sent. `ORIENTR_NO_UPDATE_CHECK=1` switches it off. Without a connection to GitHub
   the status line says *no internet, update not checked* (and asks again after an hour); it says *up to date* only
   after a real check.
-- While this repository is private, GitHub does not hand out that file without a login. The tool then asks the
+- Only when GitHub does not hand out that file (but the internet works), the tool asks the
   [GitHub CLI](https://cli.github.com/) (`gh`), when it is installed and you are logged in to it: that request goes
   with your GitHub login, as every `gh` command does. Without `gh`, nothing more is tried.
 - `orientr --selftest` (only when you run it) downloads a few source files of Bambu Studio from its public repository on

@@ -108,7 +108,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "en": {
         # form fields
         "f.printer": "Printer", "f.filament": "Filament", "f.process": "Process", "f.walls": "Walls",
-        "f.infill": "Infill", "f.support": "Support", "f.brim": "Brim", "f.parts": "Parts",
+        "f.infill": "Infill", "f.support": "Support", "f.brim": "Brim", "f.parts": "Parts", "f.parts_n": "Parts ({n})",
         "f.open": "Open in Bambu Studio", "f.language": "Language", "f.nozzle": "Nozzle",
         "f.nozzle_size": "Nozzle size",
         "s.printer": "Printer Settings", "s.quality": "Quality Settings",
@@ -116,7 +116,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "v.left": "Left only", "v.right": "Right only", "v.na": "N/A",
         # values
         "v.profile": "As in the preset", "v.wall": "{n} wall", "v.walls": "{n} walls", "v.auto": "Auto (per part)",
-        "v.on": "Always", "v.off": "Never", "v.yes": "Yes", "v.no": "No", "v.parts": "{on} of {all} printed",
+        "v.on": "Always", "v.off": "Never", "v.yes": "Yes", "v.no": "No", "v.parts": "{on} of {all}",
         "v.current": "Current",
         # buttons and help
         "b.make": "Generate", "b.cancel": "Cancel",
@@ -129,22 +129,21 @@ STRINGS: dict[str, dict[str, str]] = {
         "h.printer": "{n} printers with a template.",
         "h.filament": "{n} presets for this printer. Enter: Full list.",
         "h.process": "Layer height and speed preset.",
-        "h.walls": "Small and snap/load parts get 4+ walls anyway.",
-        "h.infill": "Small and snap/load parts get more anyway.",
+        "h.walls": "Or type any number from 1 to 20. Small and snap/load parts get 4+ walls anyway.",
+        "h.infill": "Or type any percentage from 0 to 100. Small and snap/load parts get more anyway.",
         "h.support": "Auto: Per part, from its overhangs.",
         "h.brim": "Auto: Per part (tall, small or warping).",
         "h.parts": "Enter: Choose the printed parts, and with ←→  how many of each.",
         "f.duplicates": "Duplicates", "f.max_plates": "Max plates",
         "v.no_limit": "No limit", "v.plate": "1 plate", "v.plates": "{n} plates",
-        "v.objects": "{on} of {all} printed, {n} {n:object|objects}",
-        "h.duplicates": "The whole set this many times (per part: in Parts). Enter or 0-9: Type the number.",
+        "h.duplicates": "The whole set this many times (per part: in Parts). Enter, or type a number.",
         "h.max_plates": "More plates needed: The parts are packed tighter; if they still do not fit, nothing is made.",
         "h.nozzle_size": "Sizes this printer supports.",
         "h.nozzle": "Two-nozzle printers: Auto, or force one nozzle.",
         "h.open": "Opens the project in Bambu Studio.",
         "f.prestart": "Background Bambu Studio",
         "h.prestart": "Hidden Bambu Studio: Generate opens faster. Change, then Enter: Start or close it now. "
-                      "⚠ Extra load on the PC (memory, processor).",
+                      "⚠ Extra load on the PC; at start its banner shows for a few seconds.",
         # 2026-11-23: ←→ only picks, Enter starts or closes it
         "bg.opening": "Opening…", "bg.open": "Open", "bg.closing": "Closing…", "bg.closed": "Closed",
         "n.prestart_on": "Enter: Start Bambu Studio in the background now.",
@@ -152,6 +151,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "n.prestart_started": "Saved. Bambu Studio starts in the background, as soon as the PC is quiet.",
         "n.prestart_not_started": "Saved. Bambu Studio did not start in the background now (already open, or "
                                   "Open in Bambu Studio is off).",
+        "n.prestart_first": "Saved. Bambu Studio cannot start in the background yet: open it yourself once first.",
         "n.prestart_closed": "Saved. The background Bambu Studio closes (one you use stays open).",
         "h.language": "Language of form and report.",
         # presets (2026-11-21): slots with all settings, for every model ({n}: PRESET_SLOTS, 10 since 2026-11-23)
@@ -167,6 +167,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "run.error": "Not made: {msg}", "run.back": "Press any key to go back to the form.",
         "run.cancelled": "Canceled. Nothing was made or saved.",
         "run.windows_only": "The form needs the Windows console. Use the options instead (orientr --help).",
+        "run.legacy_console": "This console window runs in legacy mode, which cannot show the form. Right-click its "
+                              "title bar > Properties, untick \"Use legacy console\", open a new window and type "
+                              "orientr again. Or use Windows Terminal.",
         "run.no_parts": "Choose at least one part to print.",
         "run.no_models": "No SOMA model found on this PC. Build a model in SOMA first.",
         "run.opened": "Orientr opened in its own window.",
@@ -196,14 +199,14 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "de": {
         "f.printer": "Drucker", "f.filament": "Filament", "f.process": "Prozess", "f.walls": "Wände",
-        "f.infill": "Füllung", "f.support": "Stützen", "f.brim": "Umrandung", "f.parts": "Teile",
+        "f.infill": "Füllung", "f.support": "Stützen", "f.brim": "Umrandung", "f.parts": "Teile", "f.parts_n": "Teile ({n})",
         "f.open": "In Bambu Studio öffnen", "f.language": "Sprache",
         "f.nozzle": "Düse", "f.nozzle_size": "Düsengröße",
         "s.printer": "Druckereinstellungen", "s.quality": "Qualitätseinstellungen",
         "s.volume": "Mengeneinstellungen", "s.other": "Sonstige",
         "v.left": "Nur links", "v.right": "Nur rechts", "v.na": "k. A.",
         "v.profile": "Wie im Profil", "v.wall": "{n} Wand", "v.walls": "{n} Wände", "v.auto": "Auto (pro Teil)",
-        "v.on": "Immer", "v.off": "Nie", "v.yes": "Ja", "v.no": "Nein", "v.parts": "{on} von {all} gedruckt",
+        "v.on": "Immer", "v.off": "Nie", "v.yes": "Ja", "v.no": "Nein", "v.parts": "{on} von {all}",
         "v.current": "Aktuell",
         "b.make": "Generieren", "b.cancel": "Abbrechen",
         "help.form": "↑↓  Feld   ←→  Ändern   Enter Liste/Knopf   G A B  Knöpfe   Esc Abbrechen",
@@ -214,28 +217,30 @@ STRINGS: dict[str, dict[str, str]] = {
         "h.printer": "{n} Drucker mit Vorlage.",
         "h.filament": "{n} Profile für diesen Drucker. Enter: ganze Liste.",
         "h.process": "Profil für Schichthöhe und Tempo.",
-        "h.walls": "Kleine und Schnapp-/Lastteile bekommen ohnehin 4+ Wände.",
-        "h.infill": "Kleine und Schnapp-/Lastteile bekommen ohnehin mehr Füllung.",
+        "h.walls": "Oder eine Zahl von 1 bis 20 eingeben. Kleine und Schnapp-/Lastteile bekommen ohnehin 4+ Wände.",
+        "h.infill": "Oder einen Prozentwert von 0 bis 100 eingeben. Kleine und Schnapp-/Lastteile bekommen ohnehin mehr "
+                    "Füllung.",
         "h.support": "Auto: Pro Teil, nach seinen Überhängen.",
         "h.brim": "Auto: Pro Teil (hoch, klein oder verzugsanfällig).",
         "h.parts": "Enter: Gedruckte Teile wählen, mit ←→  wie viele von jedem.",
         "f.duplicates": "Duplikate", "f.max_plates": "Max. Druckplatten",
         "v.no_limit": "Ohne Grenze", "v.plate": "1 Druckplatte", "v.plates": "{n} Druckplatten",
-        "v.objects": "{on} von {all} gedruckt, {n} {n:Objekt|Objekte}",
-        "h.duplicates": "Der ganze Satz so oft (pro Teil: unter Teile). Enter oder 0-9: Zahl eingeben.",
+        "h.duplicates": "Der ganze Satz so oft (pro Teil: unter Teile). Enter, oder eine Zahl eingeben.",
         "h.max_plates": "Mehr Druckplatten nötig: Die Teile werden enger gelegt; passen sie dann nicht, wird nichts erstellt.",
         "h.nozzle_size": "Größen, die dieser Drucker unterstützt.",
         "h.nozzle": "Zwei-Düsen-Drucker: Auto oder eine Düse erzwingen.",
         "h.open": "Öffnet das Projekt in Bambu Studio.",
         "f.prestart": "Bambu Studio im Hintergrund",
         "h.prestart": "Bambu Studio verborgen: Öffnen geht schneller. Ändern, dann Enter: Jetzt starten/schließen. "
-                      "⚠ Belastet den PC zusätzlich (Speicher, Prozessor).",
+                      "⚠ Belastet den PC; beim Start ist sein Banner einige Sekunden sichtbar.",
         "bg.opening": "Startet…", "bg.open": "Offen", "bg.closing": "Schließt…", "bg.closed": "Geschlossen",
         "n.prestart_on": "Enter: Bambu Studio jetzt im Hintergrund starten.",
         "n.prestart_off": "Enter: Bambu Studio im Hintergrund jetzt schließen.",
         "n.prestart_started": "Gespeichert. Bambu Studio startet im Hintergrund, sobald der PC ruhig ist.",
         "n.prestart_not_started": "Gespeichert. Bambu Studio wurde jetzt nicht im Hintergrund gestartet (schon "
                                   "offen, oder In Bambu Studio öffnen ist aus).",
+        "n.prestart_first": "Gespeichert. Bambu Studio kann noch nicht im Hintergrund starten: zuerst einmal selbst "
+                            "öffnen.",
         "n.prestart_closed": "Gespeichert. Bambu Studio im Hintergrund wird geschlossen (ein benutztes bleibt offen).",
         "h.language": "Sprache von Formular und Bericht.",
         "s.presets": "Favoriten", "f.preset": "Favorit", "v.empty": "(Leer)",
@@ -252,6 +257,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "run.cancelled": "Abgebrochen. Es wurde nichts erstellt oder gespeichert.",
         "run.windows_only": "Das Formular braucht die Windows-Konsole. Nutzen Sie stattdessen die Optionen "
                             "(orientr --help).",
+        "run.legacy_console": "Dieses Konsolenfenster läuft im Legacymodus und kann das Formular nicht zeigen. "
+                              "Rechtsklick auf die Titelleiste > Eigenschaften, \"Legacykonsole verwenden\" "
+                              "abwählen, ein neues Fenster öffnen und erneut orientr eingeben. Oder Windows Terminal "
+                              "nutzen.",
         "run.no_parts": "Wählen Sie mindestens ein Teil zum Drucken.",
         "run.no_models": "Kein SOMA-Modell auf diesem PC gefunden. Erstellen Sie zuerst ein Modell in SOMA.",
         "run.opened": "Orientr wurde in einem eigenen Fenster geöffnet.",
@@ -278,14 +287,14 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "fr": {
         "f.printer": "Imprimante", "f.filament": "Filament", "f.process": "Processus", "f.walls": "Parois",
-        "f.infill": "Remplissage", "f.support": "Supports", "f.brim": "Bordure", "f.parts": "Pièces",
+        "f.infill": "Remplissage", "f.support": "Supports", "f.brim": "Bordure", "f.parts": "Pièces", "f.parts_n": "Pièces ({n})",
         "f.open": "Ouvrir dans Bambu Studio", "f.language": "Langue",
         "f.nozzle": "Buse", "f.nozzle_size": "Taille de buse",
         "s.printer": "Réglages de l'imprimante", "s.quality": "Réglages de qualité",
         "s.volume": "Réglages de quantité", "s.other": "Autre",
         "v.left": "Gauche uniquement", "v.right": "Droite uniquement", "v.na": "N/D",
         "v.profile": "Comme le préréglage", "v.wall": "{n} paroi", "v.walls": "{n} parois", "v.auto": "Auto (par pièce)",
-        "v.on": "Toujours", "v.off": "Jamais", "v.yes": "Oui", "v.no": "Non", "v.parts": "{on} sur {all} imprimées",
+        "v.on": "Toujours", "v.off": "Jamais", "v.yes": "Oui", "v.no": "Non", "v.parts": "{on} sur {all}",
         "v.current": "Actuel",
         "b.make": "Générer", "b.cancel": "Annuler",
         "help.form": "↑↓  Champ   ←→  Changer   Entrée Choisir   G A N  Boutons   Échap Annuler",
@@ -296,28 +305,31 @@ STRINGS: dict[str, dict[str, str]] = {
         "h.printer": "{n} imprimantes avec un modèle.",
         "h.filament": "{n} préréglages pour cette imprimante. Entrée : Liste.",
         "h.process": "Préréglage de hauteur de couche et vitesse.",
-        "h.walls": "Petites pièces et pièces à clipser ou porteuses : De toute façon 4+ parois.",
-        "h.infill": "Petites pièces et pièces à clipser ou porteuses : De toute façon plus de remplissage.",
+        "h.walls": "Ou taper un nombre de 1 à 20. Petites pièces et pièces à clipser ou porteuses : De toute façon 4+ "
+                   "parois.",
+        "h.infill": "Ou taper un pourcentage de 0 à 100. Petites pièces et pièces à clipser ou porteuses : De toute "
+                    "façon plus de remplissage.",
         "h.support": "Auto : Par pièce, selon ses porte-à-faux.",
         "h.brim": "Auto : Par pièce (haute, petite ou sujette au gauchissement).",
         "h.parts": "Entrée : Choisir les pièces à imprimer, et avec ←→  combien de chacune.",
         "f.duplicates": "Duplicata", "f.max_plates": "Plaques max.",
         "v.no_limit": "Sans limite", "v.plate": "1 plaque", "v.plates": "{n} plaques",
-        "v.objects": "{on} sur {all} imprimées, {n} {n:objet|objets}",
-        "h.duplicates": "Tout le jeu autant de fois (par pièce : dans Pièces). Entrée ou 0-9 : Taper le nombre.",
+        "h.duplicates": "Tout le jeu autant de fois (par pièce : dans Pièces). Entrée, ou taper un nombre.",
         "h.max_plates": "Plus de plaques nécessaires : Les pièces sont rapprochées ; si cela ne suffit pas, rien n'est créé.",
         "h.nozzle_size": "Tailles gérées par cette imprimante.",
         "h.nozzle": "Deux buses : Auto, ou forcer une buse.",
         "h.open": "Ouvre le projet dans Bambu Studio.",
         "f.prestart": "Bambu Studio en arrière-plan",
         "h.prestart": "Bambu Studio masqué : Ouverture plus rapide. Changer, puis Entrée : Démarrer/fermer maintenant. "
-                      "⚠ Sollicite davantage le PC (mémoire, processeur).",
+                      "⚠ Sollicite le PC ; au démarrage, sa bannière s'affiche quelques secondes.",
         "bg.opening": "Ouverture…", "bg.open": "Ouvert", "bg.closing": "Fermeture…", "bg.closed": "Fermé",
         "n.prestart_on": "Entrée : Démarrer Bambu Studio en arrière-plan maintenant.",
         "n.prestart_off": "Entrée : Fermer Bambu Studio en arrière-plan maintenant.",
         "n.prestart_started": "Enregistré. Bambu Studio démarre en arrière-plan dès que le PC est calme.",
         "n.prestart_not_started": "Enregistré. Bambu Studio n'a pas démarré en arrière-plan (déjà ouvert, ou "
                                   "Ouvrir dans Bambu Studio est désactivé).",
+        "n.prestart_first": "Enregistré. Bambu Studio ne peut pas encore démarrer en arrière-plan : ouvrez-le d'abord "
+                            "une fois vous-même.",
         "n.prestart_closed": "Enregistré. Bambu Studio en arrière-plan se ferme (celui que vous utilisez reste ouvert).",
         "h.language": "Langue du formulaire et du rapport.",
         "s.presets": "Favoris", "f.preset": "Favori", "v.empty": "(Vide)",
@@ -333,6 +345,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "run.cancelled": "Annulé. Rien n'a été créé ni enregistré.",
         "run.windows_only": "Le formulaire a besoin de la console Windows. Utilisez plutôt les options "
                             "(orientr --help).",
+        "run.legacy_console": "Cette fenêtre de console est en mode hérité et ne peut pas afficher le formulaire. "
+                              "Clic droit sur sa barre de titre > Propriétés, décochez « Utiliser la console "
+                              "héritée », ouvrez une nouvelle fenêtre et tapez à nouveau orientr. Ou utilisez Windows "
+                              "Terminal.",
         "run.no_parts": "Choisissez au moins une pièce à imprimer.",
         "run.no_models": "Aucun modèle SOMA trouvé sur ce PC. Créez d'abord un modèle dans SOMA.",
         "run.opened": "Orientr s'est ouvert dans sa propre fenêtre.",
@@ -728,14 +744,14 @@ STRINGS["fr"].update({
 })
 # 2026-11-22: duplicates and copies up to 200, typed in, with a guard against projects too big to handle
 STRINGS["en"].update({
-    "f.copies": "Copies of {name}", "ps.number": "Number: ", "n.range": "A whole number 1..{hi}.",
+    "f.copies": "Copies of {name}", "ps.number": "Number: ", "n.range": "A whole number {lo}..{hi}.",
     "e.too_many": "{n} objects is too many for one project (at most {max}): lower Duplicates or a part's copies.",
     "e.too_big": "{n} objects with {tris} million triangles is too big for Bambu Studio (at most {max} million): "
                  "lower Duplicates or a part's copies.",
     "e.memory": "{n} objects: not enough memory on this PC. Lower Duplicates or a part's copies.",
 })
 STRINGS["de"].update({
-    "f.copies": "Kopien von {name}", "ps.number": "Anzahl: ", "n.range": "Eine ganze Zahl 1..{hi}.",
+    "f.copies": "Kopien von {name}", "ps.number": "Anzahl: ", "n.range": "Eine ganze Zahl {lo}..{hi}.",
     "e.too_many": "{n} Objekte sind zu viele für ein Projekt (höchstens {max}): weniger Duplikate oder Kopien "
                   "eines Teils.",
     "e.too_big": "{n} Objekte mit {tris} Millionen Dreiecken sind zu groß für Bambu Studio (höchstens {max} "
@@ -743,7 +759,7 @@ STRINGS["de"].update({
     "e.memory": "{n} Objekte: nicht genug Arbeitsspeicher auf diesem PC. Weniger Duplikate oder Kopien eines Teils.",
 })
 STRINGS["fr"].update({
-    "f.copies": "Copies de {name}", "ps.number": "Nombre : ", "n.range": "Un nombre entier 1..{hi}.",
+    "f.copies": "Copies de {name}", "ps.number": "Nombre : ", "n.range": "Un nombre entier {lo}..{hi}.",
     "e.too_many": "{n} objets, c'est trop pour un projet (au plus {max}) : moins de duplicata ou de copies "
                   "d'une pièce.",
     "e.too_big": "{n} objets avec {tris} millions de triangles, c'est trop pour Bambu Studio (au plus {max} "
@@ -900,7 +916,7 @@ STRINGS["en"].update({
     # at most 2 lines of 57 (SOMA's terminal), each sentence wrapped on its own
     "h.colours2": "{n} {n:filament|filaments}, one per color. Manual: This color, a part's own: C in Parts.",
     "h.colours_far2": "⚠ {n} {n:color is|colors are} not sold in this filament: See Parts.",
-    "help.parts_c": "↑↓  Choose   Space  On/Off   ←→ 0-9  Copies   C  Color\nA  All   N  None   Enter  Done",
+    "help.parts_c": "↑↓  Choose   Space  On/Off   ←→ or number  Copies\nC  Color   A  All   N  None   Enter  Done",
     "w.colour_unmixable": "{colour} cannot be mixed closely: printed with filament {fil}, the nearest mix",
     "e.mix_mode": "unknown color mixing mode {mode}; Bambu Studio has: {modes}",
     "e.mix_printer": "the {printer} has one hotend: color mixing changes filament on every sub-layer there (much "
@@ -919,7 +935,7 @@ STRINGS["de"].update({
     "f.colour_of": "Farbe von {name}",
     "h.colours2": "{n} {n:Filament|Filamente}, eins je Farbe. Manuell: diese Farbe, je Teil: C unter Teile.",
     "h.colours_far2": "⚠ {n} {n:Farbe gibt|Farben gibt} es für dieses Filament nicht: Siehe Teile.",
-    "help.parts_c": "↑↓  Wählen   Leertaste  An/Aus   ←→ 0-9  Kopien   C  Farbe\nA  Alle   N  Keine   Enter  Fertig",
+    "help.parts_c": "↑↓  Wählen   Leertaste  An/Aus   ←→ oder Zahl  Kopien\nC  Farbe   A  Alle   N  Keine   Enter  Fertig",
     "w.colour_unmixable": "{colour} lässt sich nicht genau mischen: gedruckt mit Filament {fil}, der nächsten Mischung",
     "e.mix_mode": "unbekannter Farbmischmodus {mode}; Bambu Studio hat: {modes}",
     "e.mix_printer": "der {printer} hat ein Hotend: Farbmischen wechselt dort bei jeder Teilschicht das Filament (viel "
@@ -938,7 +954,7 @@ STRINGS["fr"].update({
     "f.colour_of": "Couleur de {name}",
     "h.colours2": "{n} filament{n:|s}, un par couleur. Manuel : Cette couleur, par pièce : C dans Pièces.",
     "h.colours_far2": "⚠ {n} couleur{n:|s} n'exist{n:e|ent} pas pour ce filament : Voir Pièces.",
-    "help.parts_c": "↑↓  Choisir   Espace  Oui/Non   ←→ 0-9  Copies   C  Couleur\nA  Toutes   N  Aucune   Entrée  Terminé",
+    "help.parts_c": "↑↓  Choisir   Espace  Oui/Non   ←→ ou nombre  Copies\nC  Couleur   A  Toutes   N  Aucune   Entrée  Terminé",
     "w.colour_unmixable": "{colour} ne se mélange pas de près : imprimée avec le filament {fil}, le mélange le plus "
                           "proche",
     "e.mix_mode": "mode de mélange de couleurs {mode} inconnu ; Bambu Studio a : {modes}",
